@@ -258,8 +258,8 @@ for method in methods:
     plt.plot(h_vals, y,
              marker=markers[method],
              linestyle=linestyles[method],
+             zorder=3,
              label=f'{method}')
-    # 添加置信区间：±50%
     plt.fill_between(h_vals, y * 0.5, y * 1.5, alpha=0.2)
 
 plt.xscale('log')
@@ -279,12 +279,10 @@ for method in methods:
     plt.plot(h_vals, y,
              marker=markers[method],
              linestyle=linestyles[method],
-             color=color,
              zorder=3,
              label=f'{method}')
     plt.fill_between(h_vals,
                      y * 0.5, y * 1.5,
-                     color=color,
                      alpha=0.2,
                      zorder=2)
 
