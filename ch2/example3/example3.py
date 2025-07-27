@@ -148,7 +148,7 @@ plt.tight_layout()
 plt.savefig('3.png', dpi=300)
 
 plt.figure(4, figsize=(8, 6))
-plt.plot(t3, error3, label="stride 2^4", linestyle='--', color='blue', marker='o')
+plt.plot(t3, np.array(error3) + 1e-16, label="stride 2^4", linestyle='--', color='blue', marker='o')
 plt.plot(t4, error4, label="stride 2^8", linestyle='-', color='green')
 plt.plot(t5, error5, label="stride 2^10", linestyle=':', color='red')
 
