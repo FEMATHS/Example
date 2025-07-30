@@ -111,6 +111,82 @@ def AB_method(hi=1, u_0=1, order=4):
 
     return U
 
+def AM_method(hi=1, u_0=1, order=4):
+    assert order in [1, 2, 3, 4, 5], "只支持 AM1 到 AM5"
+    h = get_time_step(hi)
+    N = int(1 / h)
+
+    # AM 方法的组合系数（已按表格缩放过）
+    coeff_dict = {
+        1: [1],
+        2: [1/2, 1/2],
+        3: [5/12, 8/12, -1/12],
+        4: [9/24, 19/24, -5/24, 1/24],
+        5: [251/720, 646/720, -264/720, 106/720, -19/720]
+    }
+    coeffs = coeff_dict[order]
+
+    # 初始用 RK4
+    U = Runge_Kutta4(hi=hi, Funi=1, u_0=u_0)
+    f_list = [f(i*h, U[i]) for i in range(order)]
+
+    for n in range(order, N + 1):
+        # 预测值（用 AB 方法）
+        f_predict = sum(c * f_list[-(i + 1)] for i, c in enumerate(coeffs[1:]))
+        u_predict = U[n - 1] + h * f_predict  # 初始预测 u_m（忽略 f_m）
+
+        # 迭代求解隐式项 u_m（Picard 法）
+        for _ in range(3):  # 通常 2~3 次即可收敛
+            f0 = f(n * h, u_predict)
+            u_predict = U[n - 1] + h * (coeffs[0] * f0 + f_predict)
+
+        U[n] = u_predict
+        f_list.append(f(n * h, U[n]))
+        if len(f_list) > order:
+            f_list.pop(0)
+
+    return U
+
+
+def Gear_method(hi=1, u_0=1, order=4):
+    assert order in [1, 2, 3, 4, 5, 6], "只支持 Gear1 到 Gear6"
+    h = get_time_step(hi)
+    N = int(1 / h)
+
+    # Gear 系数表（c_{k,i}, g_k）
+    coeff_table = {
+        1: ([], 1),
+        2: ([-4/3, 1/3], 2/3),
+        3: ([-18/11, 9/11, -2/11], 6/11),
+        4: ([-48/25, 36/25, -16/25, 3/25], 12/25),
+        5: ([-300/137, 300/137, -200/137, 75/137, -12/137], 60/137),
+        6: ([-360/147, 450/147, -400/147, 225/147, -72/147, 10/147], 60/147)
+    }
+    coeffs, gk = coeff_table[order]
+
+    # 初始值
+    U = Runge_Kutta4(hi=hi, Funi=1, u_0=u_0)
+
+    for n in range(order, N + 1):
+        # 处理 order=1 的特殊情况
+        if order == 1:
+            rhs = 0
+        else:
+            rhs = -sum(coeffs[i] * U[n - i - 1] for i in range(order))
+        
+        # 初值预测
+        u_predict = U[n - 1]
+
+        # Picard 迭代
+        for _ in range(3):
+            f_val = f(n * h, u_predict)
+            u_predict = h * gk * f_val + rhs
+
+        U[n] = u_predict
+
+    return U
+
+
 # 设置初始条件
 u_0 = 1
 
@@ -176,4 +252,195 @@ plt.legend()
 plt.grid(True, linestyle='--')
 plt.tight_layout()
 plt.savefig('3.png', dpi=300)  # 保存图像
+
+# 添加AM方法比较图
+plt.figure(4, figsize=(8, 6))
+plt.plot(t_vals, U_exact, label='Exact', linestyle='--', color='black')
+
+for k in range(1, 6):
+    U_am = np.array(AM_method(hi=1, u_0=u_0, order=k))
+    plt.plot(t_vals, U_am + 1e-16, label=f'AM{k}', marker='s', markersize=5)
+
+plt.xlabel("t")
+plt.ylabel("u(t)")
+plt.title("Comparison of Adams–Moulton (Order 1–5)")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('4.png', dpi=300)  # 保存图像
+
+# AM方法误差图
+plt.figure(5, figsize=(8, 6))
+
+for k in range(1, 6):
+    U_am = np.array(AM_method(hi=1, u_0=u_0, order=k))
+    error = np.abs(U_am - U_exact)
+    plt.semilogy(t_vals, error + 1e-16, label=f'Error (AM{k})', marker='s', markersize=5)
+
+plt.xlabel("t")
+plt.ylabel("Absolute Error (log scale)")
+plt.title("Error of Adams–Moulton (Order 1–5)")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('5.png', dpi=300)  # 保存图像
+
+# 添加Gear方法比较图
+plt.figure(6, figsize=(8, 6))
+plt.plot(t_vals, U_exact, label='Exact', linestyle='--', color='black')
+
+for k in range(1, 7):
+    U_gear = np.array(Gear_method(hi=1, u_0=u_0, order=k))
+    plt.plot(t_vals, U_gear + 1e-16, label=f'Gear{k}', marker='^', markersize=5)
+
+plt.xlabel("t")
+plt.ylabel("u(t)")
+plt.title("Comparison of Gear Methods (Order 1–6)")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('6.png', dpi=300)  # 保存图像
+
+# Gear方法误差图
+plt.figure(7, figsize=(8, 6))
+
+for k in range(1, 7):
+    U_gear = np.array(Gear_method(hi=1, u_0=u_0, order=k))
+    error = np.abs(U_gear - U_exact)
+    plt.semilogy(t_vals, error + 1e-16, label=f'Error (Gear{k})', marker='^', markersize=5)
+
+plt.xlabel("t")
+plt.ylabel("Absolute Error (log scale)")
+plt.title("Error of Gear Methods (Order 1–6)")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('7.png', dpi=300)  # 保存图像
+
+# 三种方法综合比较图
+plt.figure(8, figsize=(8, 6))
+plt.plot(t_vals, U_exact, label='Exact', linestyle='--', color='black', linewidth=2)
+
+# 选择4阶方法进行比较
+U_ab4 = np.array(AB_method(hi=1, u_0=u_0, order=4))
+U_am4 = np.array(AM_method(hi=1, u_0=u_0, order=4))
+U_gear4 = np.array(Gear_method(hi=1, u_0=u_0, order=4))
+
+plt.plot(t_vals, U_ab4 + 1e-16, label='AB4', marker='o', markersize=6)
+plt.plot(t_vals, U_am4 + 1e-16, label='AM4', marker='s', markersize=6)
+plt.plot(t_vals, U_gear4 + 1e-16, label='Gear4', marker='^', markersize=6)
+
+plt.xlabel("t")
+plt.ylabel("u(t)")
+plt.title("Comparison of 4th Order Methods: AB4 vs AM4 vs Gear4")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('8.png', dpi=300)  # 保存图像
+
+# 三种方法误差综合比较
+plt.figure(9, figsize=(8, 6))
+
+error_ab4 = np.abs(U_ab4 - U_exact)
+error_am4 = np.abs(U_am4 - U_exact)
+error_gear4 = np.abs(U_gear4 - U_exact)
+
+plt.semilogy(t_vals, error_ab4 + 1e-16, label='Error (AB4)', marker='o', markersize=6)
+plt.semilogy(t_vals, error_am4 + 1e-16, label='Error (AM4)', marker='s', markersize=6)
+plt.semilogy(t_vals, error_gear4 + 1e-16, label='Error (Gear4)', marker='^', markersize=6)
+
+plt.xlabel("t")
+plt.ylabel("Absolute Error (log scale)")
+plt.title("Error Comparison: AB4 vs AM4 vs Gear4")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('9.png', dpi=300)  # 保存图像
+
+# AM方法收敛性分析
+plt.figure(10, figsize=(8, 6))
+
+# 计算不同步长下的最大误差
+h_values_am = []
+max_errors_am = {1: [], 2: [], 3: [], 4: [], 5: []}
+
+for hi in [1, 2, 3, 4]:
+    h = get_time_step(hi)
+    h_values_am.append(h)
+    U_exact_hi = np.array(UTrue_function(hi=hi))
+    
+    for order in range(1, 6):
+        U_am = np.array(AM_method(hi=hi, u_0=u_0, order=order))
+        max_error = np.max(np.abs(U_am - U_exact_hi))
+        max_errors_am[order].append(max_error)
+
+# 绘制AM方法收敛性曲线
+for order in range(1, 6):
+    plt.loglog(h_values_am, max_errors_am[order], 's-', label=f'AM{order}')
+
+plt.xlabel("Step size h")
+plt.ylabel("Maximum Error (log scale)")
+plt.title("Convergence Analysis of Adams–Moulton Methods")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('10.png', dpi=300)  # 保存图像
+
+# Gear方法收敛性分析
+plt.figure(11, figsize=(8, 6))
+
+# 计算不同步长下的最大误差
+h_values_gear = []
+max_errors_gear = {1: [], 2: [], 3: [], 4: [], 5: [], 6: []}
+
+for hi in [1, 2, 3, 4]:
+    h = get_time_step(hi)
+    h_values_gear.append(h)
+    U_exact_hi = np.array(UTrue_function(hi=hi))
+    
+    for order in range(1, 7):
+        U_gear = np.array(Gear_method(hi=hi, u_0=u_0, order=order))
+        max_error = np.max(np.abs(U_gear - U_exact_hi))
+        max_errors_gear[order].append(max_error)
+
+# 绘制Gear方法收敛性曲线
+for order in range(1, 7):
+    plt.loglog(h_values_gear, max_errors_gear[order], '^-', label=f'Gear{order}')
+
+plt.xlabel("Step size h")
+plt.ylabel("Maximum Error (log scale)")
+plt.title("Convergence Analysis of Gear Methods")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('11.png', dpi=300)  # 保存图像
+
+# 三种方法4阶收敛性综合比较
+plt.figure(12, figsize=(8, 6))
+
+# 重新计算AB方法的收敛性（为了保持一致性）
+h_values_ab = []
+max_errors_ab4 = []
+
+for hi in [1, 2, 3, 4]:
+    h = get_time_step(hi)
+    h_values_ab.append(h)
+    U_exact_hi = np.array(UTrue_function(hi=hi))
+    U_ab4 = np.array(AB_method(hi=hi, u_0=u_0, order=4))
+    max_error = np.max(np.abs(U_ab4 - U_exact_hi))
+    max_errors_ab4.append(max_error)
+
+# 绘制三种4阶方法的收敛性比较
+plt.loglog(h_values_ab, max_errors_ab4, 'o-', label='AB4', linewidth=2, markersize=8)
+plt.loglog(h_values_am, max_errors_am[4], 's-', label='AM4', linewidth=2, markersize=8)
+plt.loglog(h_values_gear, max_errors_gear[4], '^-', label='Gear4', linewidth=2, markersize=8)
+
+plt.xlabel("Step size h")
+plt.ylabel("Maximum Error (log scale)")
+plt.title("Convergence Comparison: AB4 vs AM4 vs Gear4")
+plt.legend()
+plt.grid(True, linestyle='--')
+plt.tight_layout()
+plt.savefig('12.png', dpi=300)  # 保存图像
+
 plt.show()
