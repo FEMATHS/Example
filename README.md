@@ -23,3 +23,9 @@
 ### 算例 5 Adams 方法和 Gear 方法
 
 对应课本中提到的 Adams-Bashforth（显式）、Adams-Moulton（隐式）和 Gear（隐式）三种线性多步法，对应页面[https://femaths.github.io/docs/ch2/linear_multi_step](https://femaths.github.io/docs/ch2/linear_multi_step)的实验。
+
+## 📕 第一章：Hello，计算数学
+
+### 算例 1 差分法
+
+对于课本作业 1，使用 差分法求解算例，对应页面[https://femaths.github.io/docs/ch3/begin-helloworld-FDM](https://femaths.github.io/docs/ch3/begin-helloworld-FDM)的一页面的实验。
