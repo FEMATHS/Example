@@ -6,7 +6,6 @@ figure('Color','w','Position',[100 100 700 700])
 clf
 
 % 坐标轴占满整个图像
-figure('Color','w','Position',[100 100 700 700])
 ax = axes(); % 左下角x,y,width,height
 
 for N = 2:2:100
