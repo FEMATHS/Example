@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib import cm, ticker
 
 plt.rcParams['font.family'] = ['Times New Roman']
@@ -176,3 +177,53 @@ plot_surface(Err_imp, "Absolute Error (Implicit)", "Err_Implicit.png")
 plot_surface(Err_cn,  "Absolute Error (Crank–Nicolson)", "Err_CN.png")
 
 print("✅ 所有图片已生成，z轴和色条统一数量级显示，已保存本地。")
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.animation import FuncAnimation, PillowWriter
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib import cm
+
+def animate_long_strip_column(U, filename, interval=200):
+    """
+    U: shape (Nt+1, Nx)
+    filename: GIF 文件名
+    interval: 每帧间隔(ms)
+    """
+    fig, ax = plt.subplots(figsize=(10,2))  # 窄条形
+    Nx = U.shape[1]
+
+    # 创建初始热图: 每列是整条色带
+    img = ax.imshow(U[0:1, :], aspect='auto', cmap=cm.viridis,
+                    extent=[0, 1, 0, 1], vmin=U.min(), vmax=U.max())
+    
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_yticks([])
+    ax.set_xlabel("x")
+
+    cbar = fig.colorbar(img, ax=ax)
+    cbar.set_label("u(x,t)")
+
+    def update(frame):
+        # 每一帧都显示一条完整横条
+        img.set_data(np.tile(U[frame,:], (10,1)))  # 重复多行形成整条色带
+        return img,
+
+    anim = FuncAnimation(fig, update, frames=U.shape[0], interval=interval, blit=True)
+    writer = PillowWriter(fps=5)
+    anim.save(filename, writer=writer)
+    plt.close(fig)
+    print(f"✅ 长条热图 GIF 已保存为 {filename}")
+
+# -------------------------
+# 生成三个方法的动画
+# -------------------------
+animate_long_strip_column(U_exp, "Explicit_FTCS_strip.gif")
+animate_long_strip_column(U_imp, "Implicit_BTCS_strip.gif")
+animate_long_strip_column(U_cn,  "Crank_Nicolson_strip.gif")
+
